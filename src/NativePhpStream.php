@@ -112,7 +112,8 @@ class NativePhpStream implements StreamInterface
         sprintf('The parameter "handle" must be a stream resource.')
       );
     }
-    $this->init($handle);
+    $this->handle = $handle;
+    $this->initHandleState();
   }
 
 
@@ -120,9 +121,9 @@ class NativePhpStream implements StreamInterface
    * Initialize the stream properties
    * Set the stream capabilities.
    *
-   * @param resource $handle
    */
-  private function init($handle) {
+  private function initHandleState() {
+    $handle = $this->handle;
     $metaData = stream_get_meta_data($handle);
     $canSeek = $metaData['seekable'];
     $fileMode = $metaData['mode'];
