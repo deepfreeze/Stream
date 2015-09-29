@@ -2,10 +2,12 @@
 namespace DeepFreeze\IO\Stream;
 
 
+use DeepFreeze\IO\Stream\Exception\NotSupportedException;
 use DeepFreeze\IO\Stream\Exception\RuntimeException;
+use DeepFreezeSpi\IO\Stream\Exception;
 use DeepFreezeSpi\IO\Stream\StreamInterface;
 
-class AppendStream extends StreamDecorator
+class AppendStream implements StreamInterface
 {
   /**
    * @var int
@@ -24,6 +26,10 @@ class AppendStream extends StreamDecorator
    */
   private $streams = array();
 
+  /**
+   * @var int
+   */
+  private $defaultCopyBufferSize = 65536;
 
   public function __construct(array $streams) {
     $this->setStreams($streams);
@@ -137,10 +143,13 @@ class AppendStream extends StreamDecorator
     if (empty($this->streams)) {
       return null;
     }
-    $buffer = '';
-    $bytesRemaining = $count;
     $currentStreamIndex = $this->currentStreamIndex;
     $streamCount = count($this->streams);
+    if ($currentStreamIndex >= $streamCount) {
+      return null;
+    }
+    $buffer = '';
+    $bytesRemaining = $count;
     do {
       $read = $this->streams[$currentStreamIndex]->read($bytesRemaining);
       if (empty($read)) {
@@ -153,7 +162,7 @@ class AppendStream extends StreamDecorator
       }
       $buffer .= $read;
       $bytesRemaining = $count - strlen($buffer);
-    } while ($bytesRemaining > 0);
+    } while (($bytesRemaining > 0) && ($currentStreamIndex < $streamCount));
     return $buffer;
   }
 
@@ -348,4 +357,81 @@ class AppendStream extends StreamDecorator
     // Position is before the first file:
     throw new Exception\RuntimeException('Unable to seek before start position.');
   }
+
+
+  public function flush() {
+    // No buffers to flush
+  }
+
+  public function write($data, $length = null) {
+    throw new NotSupportedException("Write is not supported on AppendStream.");
+  }
+
+
+  public function canTimeout() {
+    return false;
+  }
+
+
+  public function setPosition($position) {
+    $this->seek($position, self::SEEK_ORIGIN);
+  }
+
+
+  public function setReadTimeout($ms) {
+    throw new NotSupportedException("Timeouts are not supported on AppendStream.");
+  }
+
+
+  public function getReadTimeout() {
+    throw new NotSupportedException("Timeouts are not supported on AppendStream.");
+  }
+
+
+  public function setWriteTimeout($ms) {
+    throw new NotSupportedException("Timeouts are not supported on AppendStream.");
+  }
+
+
+  public function getWriteTimeout() {
+    throw new NotSupportedException("Timeouts are not supported on AppendStream.");
+  }
+
+
+  public function copyTo(StreamInterface $destination, $bufferSize = null) {
+    if (null === $destination) {
+      throw new Exception\InvalidArgumentException('destination');
+    }
+    if (!$this->canRead() && !$this->canWrite()) {
+      throw new Exception\ObjectDisposedException('this');
+    }
+    if (!$destination->canRead() && !$destination->canWrite()) {
+      throw new Exception\ObjectDisposedException('destination');
+    }
+    if (!$this->canRead()) {
+      throw new Exception\NotSupportedException();
+    }
+    if (!$destination->canWrite()) {
+      throw new Exception\NotSupportedException();
+    }
+
+    if (null !== $bufferSize && $bufferSize <= 0) {
+      throw new Exception\InvalidArgumentException('bufferSize',
+        $bufferSize,
+        'Parameter "bufferSize" must be greater than 0.');
+    }
+
+    // Copy in chunks
+    $bufferSize = $bufferSize ?: $this->defaultCopyBufferSize;
+    while (($data = $this->read($bufferSize)) !== null) {
+      $destination->write($data);
+    }
+  }
+
+
+  public function setLength($length) {
+    throw new NotSupportedException("Stream is not writable.");
+  }
+
+
 }
