@@ -48,7 +48,7 @@ class FileStream extends StreamDecorator implements StreamInterface
   );
 
 
-  public function __construct($path, $fileMode, $fileAccess) {
+  public function __construct($path, $fileMode, $fileAccess=self::MODE_OPEN) {
     $this->init($path, $fileMode, $fileAccess);
   }
 
