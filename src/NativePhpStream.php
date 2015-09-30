@@ -371,7 +371,14 @@ class NativePhpStream implements StreamInterface
     // The filesize cache is now invalidated.
     $this->fileSize = null;
 
-    $result = fwrite($this->handle, $data, $length);
+    if ($length === 0) {
+      $length = null;
+    }
+    if ($length === null) {
+      $result = fwrite($this->handle, $data);
+    } else {
+      $result = fwrite($this->handle, $data, $length);
+    }
     if ($result === false) {
       throw new Exception\RuntimeException('Error writing data.');
     }
@@ -442,14 +449,14 @@ class NativePhpStream implements StreamInterface
 
 
   private function requireWritableHandle() {
-    if (!$this->canSeek()) {
+    if (!$this->canWrite()) {
       throw new Exception\NotSupportedException('Stream does not support writing.');
     }
   }
 
 
   private function requireReadableHandle() {
-    if (!$this->canSeek()) {
+    if (!$this->canRead()) {
       throw new Exception\NotSupportedException('Stream does not support reading.');
     }
   }
