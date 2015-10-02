@@ -112,7 +112,8 @@ class NativePhpStream implements StreamInterface
         sprintf('The parameter "handle" must be a stream resource.')
       );
     }
-    $this->init($handle);
+    $this->handle = $handle;
+    $this->initHandleState();
   }
 
 
@@ -120,9 +121,9 @@ class NativePhpStream implements StreamInterface
    * Initialize the stream properties
    * Set the stream capabilities.
    *
-   * @param resource $handle
    */
-  private function init($handle) {
+  private function initHandleState() {
+    $handle = $this->handle;
     $metaData = stream_get_meta_data($handle);
     $canSeek = $metaData['seekable'];
     $fileMode = $metaData['mode'];
@@ -370,7 +371,14 @@ class NativePhpStream implements StreamInterface
     // The filesize cache is now invalidated.
     $this->fileSize = null;
 
-    $result = fwrite($this->handle, $data, $length);
+    if ($length === 0) {
+      $length = null;
+    }
+    if ($length === null) {
+      $result = fwrite($this->handle, $data);
+    } else {
+      $result = fwrite($this->handle, $data, $length);
+    }
     if ($result === false) {
       throw new Exception\RuntimeException('Error writing data.');
     }
@@ -441,14 +449,14 @@ class NativePhpStream implements StreamInterface
 
 
   private function requireWritableHandle() {
-    if (!$this->canSeek()) {
+    if (!$this->canWrite()) {
       throw new Exception\NotSupportedException('Stream does not support writing.');
     }
   }
 
 
   private function requireReadableHandle() {
-    if (!$this->canSeek()) {
+    if (!$this->canRead()) {
       throw new Exception\NotSupportedException('Stream does not support reading.');
     }
   }

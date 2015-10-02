@@ -6,7 +6,7 @@
     "stream"
   ],
   "require": {
-    "deepfreeze-spi/stream": "~0.1.0"
+    "deepfreeze-spi/stream": "~0.2.0"
   },
   "require-dev": {
     "phpunit/phpunit": "~4.6.0",
